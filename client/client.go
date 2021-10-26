@@ -36,7 +36,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	resp := client.Publish(ctx, &pb.Msg{Message: "Test bish"})
+	resp, err := client.Publish(ctx, &pb.Msg{Message: "Test bish"})
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
@@ -49,10 +49,10 @@ func main() {
 
 }
 
-func (client *ChatServiceClient) Publish(ctx context.Context, msg *pb.Msg) *pb.Response {
+/*func (client *ChatServiceClient) Publish(ctx context.Context, msg *pb.Msg) (*pb.Response, error) {
 	resp, err := client.Broadcast(ctx, msg)
 	if err != nil {
 		log.Fatalf("Could not send message: %v", err)
 	}
 	return resp, nil
-}
+}*/

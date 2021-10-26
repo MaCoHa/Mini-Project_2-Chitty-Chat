@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"example/Mini_Project_2_Chitty-Chat/chat"
+	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
 	"net"
 
@@ -14,13 +14,21 @@ const (
 )
 
 type ChatServiceServer struct {
-	chat.UnimplementedChatServiceServer
+	pb.UnimplementedChatServiceServer
 }
 
-func (s *ChatServiceServer) Broadcast(ctx context.Context, in *chat.Msg) (*chat.Response, error) {
+func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Msg) (*pb.Response, error) {
+	resp, err := s.Broadcast(ctx, msg)
+	if err != nil {
+		log.Fatalf("Could not send message: %v", err)
+	}
+	return resp, nil
+}
+
+func (s *ChatServiceServer) Broadcast(ctx context.Context, in *pb.Msg) (*pb.Response, error) {
 	log.Printf("Received Broadcast request")
 	log.Printf("Msg:" + in.Message)
-	return &chat.Response{Message: "Yo"}, nil
+	return &pb.Response{Message: "Yo"}, nil
 }
 
 func main() {
@@ -30,7 +38,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	chat.RegisterChatServiceServer(s, &ChatServiceServer{})
+	pb.RegisterChatServiceServer(s, &ChatServiceServer{})
 	log.Printf("server listening at %v", lis.Addr())
 
 	if err := s.Serve(lis); err != nil {
