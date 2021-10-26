@@ -7,8 +7,8 @@ package chat;
 
 service ChatService {
     rpc Publish (Msg) returns (Response) {}
-    rpc Brodcast (Msg) returns (Response) {}
-    rpc Recieve (Msg) returns (Response) {}
+    rpc Broadcast (Msg) returns (Response) {}
+    rpc Receive (Msg) returns (Response) {}
     rpc Connect (User) returns (Response) {}
     rpc Disconnect (User) returns (Response) {}
 }
@@ -23,5 +23,5 @@ message Response {
 
 message User {
     string Username = 1;
-    int Port = 2;
+    int32 Port = 2;
 }

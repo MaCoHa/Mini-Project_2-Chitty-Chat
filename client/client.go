@@ -1,8 +1,7 @@
 package main
 
 import (
-	"context"
-	pb "gRPC/chat"
+	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
 
 	"google.golang.org/grpc"
@@ -19,32 +18,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
-	defer conn.Close()
-	client := pb.NewCourseProtoClient(conn)
+	defer func(conn *grpc.ClientConn) {
+		err := conn.Close()
+		if err != nil {
 
-	SendPostCourseRequest(client)
-	SendGetCourseRequest(client)
+		}
+	}(conn)
+	client := pb.NewChatServiceClient(conn)
+
+	SendPublish(client)
 }
 
-func SendPostCourseRequest(client pb.CourseProtoClient) {
-	course := pb.Course{
-		CourseId:          1,
-		Name:              "DØSYS",
-		Workload:          15,
-		SatisfactoryScore: 10,
-		Teachers:          []string{"Tom"},
-		Students:          []string{"Bente"},
+func SendPublish(client pb.ChatServiceClient) {
+	chat := pb.Msg{
+		Message: "TestMessage",
 	}
-	log.Printf("Course: %s added to courses", course.Name)
-}
-
-func SendGetCourseRequest(client pb.CourseProtoClient) {
-	msg := pb.GetCourseRequest{}
-
-	resp, err := client.GetCourse(context.Background(), &msg)
-	if err != nil {
-		log.Fatalf("Error when using GetCourse: %s", err)
-	}
-
-	log.Printf("Server responeded with: %s \n", resp)
+	log.Printf("Message: %s", chat.Message)
 }

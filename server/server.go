@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
 	"net"
 
@@ -14,18 +14,12 @@ const (
 )
 
 type Server struct {
-	course.UnimplementedCourseProtoServer
+	chat.UnimplementedChatServiceServer
 }
 
-func (s *Server) GetCourse(ctx context.Context, in *course.GetCourseRequest) (*course.GetCourseReply, error) {
-	log.Printf("Received GetCourse request")
-	return &course.GetCourseReply{Message: "WIP: *List of current courses*"}, nil
-}
-
-func (s *Server) PostCourse(ctx context.Context, in *course.Course) (*course.PostCourseReply, error) {
-	log.Printf("Received request to add Course: %s", in.Name)
-	complete := fmt.Sprintf("Course: %s added to current available courses!", in.Name)
-	return &course.PostCourseReply{Message: complete}, nil
+func (s *Server) Broadcast(ctx context.Context, in *chat.Msg) (*chat.Response, error) {
+	log.Printf("Received Broadcast request")
+	return &chat.Response{Message: "Yo"}, nil
 }
 
 func main() {
@@ -35,7 +29,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	course.RegisterCourseProtoServer(s, &Server{})
+	chat.RegisterChatServiceServer(s, &Server{})
 	log.Printf("server listening at %v", lis.Addr())
 
 	if err := s.Serve(lis); err != nil {
