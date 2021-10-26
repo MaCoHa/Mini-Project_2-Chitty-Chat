@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
+	"os"
 	"time"
 
 	"google.golang.org/grpc"
@@ -33,26 +35,39 @@ func main() {
 
 	client := pb.NewChatServiceClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	resp, err := client.Publish(ctx, &pb.Msg{Message: "Test bish"})
+	/*resp, err := client.Publish(ctx, &pb.Msg{Message: "Test bish"})
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
 
 	if resp != nil {
-		log.Fatalf("success, %v", resp)
+		log.Printf("success, %v", resp)
 	} else {
-		log.Fatalf("problem, %v", err)
-	}
+		log.Printf("problem, %v", err)
+	}*/
 
+	read(ctx, client)
 }
 
-/*func (client *ChatServiceClient) Publish(ctx context.Context, msg *pb.Msg) (*pb.Response, error) {
-	resp, err := client.Broadcast(ctx, msg)
-	if err != nil {
-		log.Fatalf("Could not send message: %v", err)
+func read(ctx context.Context, client pb.ChatServiceClient) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		line, _ := reader.ReadString('\n')
+		if line == "quit" {
+			//code to leave chat here
+			break
+		}
+
+		msg := &pb.Msg{Message: line}
+
+		client.Publish(ctx, msg)
 	}
-	return resp, nil
-}*/
+}
+
+func updateNewsfeed(ctx context.Context, client ChatServiceClient) {
+	//call client and wait for response from server
+	//response should contain the broadcasted messages
+}
