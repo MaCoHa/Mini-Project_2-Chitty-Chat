@@ -5,9 +5,11 @@ import (
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
+	"math/rand"
 	"os"
-	"time"
+	"strconv"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 )
@@ -15,6 +17,10 @@ import (
 const (
 	serverAddr = "localhost:8008"
 )
+
+var client pb.ChatServiceClient
+var ctx context.Context
+var user *pb.User
 
 type ChatServiceClient struct {
 	pb.UnimplementedChatServiceServer
@@ -34,16 +40,21 @@ func main() {
 		}
 	}(conn)
 
-	client := pb.NewChatServiceClient(conn)
+	client = pb.NewChatServiceClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	go updateNewsfeed(ctx, client, &pb.User{})
-	read(ctx, client)
+	var username string = strconv.Itoa(rand.Intn(1000))
+	user = &pb.User{Username: username}
+
+	connect()
+	go updateNewsfeed()
+	read()
 }
 
-func read(ctx context.Context, client pb.ChatServiceClient) {
+func read() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		line, _ := reader.ReadString('\n')
@@ -52,7 +63,7 @@ func read(ctx context.Context, client pb.ChatServiceClient) {
 			break
 		}
 
-		msg := &pb.Message{Text: line}
+		msg := &pb.Message{User: user, Text: line}
 
 		client.Publish(ctx, msg)
 	}
@@ -61,7 +72,7 @@ func read(ctx context.Context, client pb.ChatServiceClient) {
 //protoc go types
 //https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any
 
-func updateNewsfeed(ctx context.Context, client pb.ChatServiceClient, user *pb.User) {
+func updateNewsfeed() {
 	for {
 		msg, err := client.Listen(ctx, user)
 		if err != nil {
@@ -69,4 +80,12 @@ func updateNewsfeed(ctx context.Context, client pb.ChatServiceClient, user *pb.U
 		}
 		log.Println(msg.Text)
 	}
+}
+
+func connect() {
+	resp, err := client.Connect(ctx, user)
+	if err != nil {
+		log.Fatalf("listening problem: %v", err)
+	}
+	log.Println(resp)
 }
