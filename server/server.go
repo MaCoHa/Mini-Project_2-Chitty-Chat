@@ -26,7 +26,6 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Msg) (*pb.Respo
 }
 
 func (s *ChatServiceServer) Broadcast(ctx context.Context, in *pb.Msg) (*pb.Response, error) {
-	log.Printf("Received Broadcast request")
 	log.Printf("Msg:" + in.Message)
 	return &pb.Response{Message: "Yo"}, nil
 }

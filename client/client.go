@@ -67,6 +67,9 @@ func read(ctx context.Context, client pb.ChatServiceClient) {
 	}
 }
 
+//protoc go types
+//https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any
+
 func updateNewsfeed(ctx context.Context, client ChatServiceClient) {
 	//call client and wait for response from server
 	//response should contain the broadcasted messages
