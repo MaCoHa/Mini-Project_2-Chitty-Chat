@@ -6,8 +6,8 @@ import (
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 )
@@ -34,6 +34,7 @@ func main() {
 		}
 	}(conn)
 
+	log.Println("Successfully connected to " + serverAddr)
 	client := pb.NewChatServiceClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
