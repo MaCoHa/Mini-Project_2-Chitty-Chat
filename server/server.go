@@ -13,11 +13,16 @@ const (
 	port = ":8008"
 )
 
-var com chan *pb.Message
-var mes string
+var userList *pb.UserList
 
 type ChatServiceServer struct {
 	pb.UnimplementedChatServiceServer
+}
+
+func (s *ChatServiceServer) Connect(ctx context.Context, user *pb.User) (*pb.Response, error) {
+	userList.Users[1] = user
+	userList.MessageMap[user.Username] = &pb.Message{User: user, Text: ""}
+	return &pb.Response{Status: "Join Successful"}, nil
 }
 
 func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
@@ -30,24 +35,22 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.R
 
 func (s *ChatServiceServer) Broadcast(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
 	log.Printf("Msg:" + msg.Text)
-	//com <- msg
-	mes = msg.Text
-	return &pb.Response{Status: "Yo"}, nil
+	userList.MessageMap[msg.User.Username] = msg
+	return &pb.Response{Status: "Message Recieved"}, nil
 }
 
 func (s *ChatServiceServer) Listen(ctx context.Context, user *pb.User) (*pb.Message, error) {
-	//msg := <-com
-	var msg string
+	var newMsg *pb.Message
 
-	for {
-		if mes != "" {
-			msg = mes
-			mes = ""
+	for userName, msg := range userList.MessageMap {
+		if msg.Text != "" {
+			newMsg = msg
+			userList.MessageMap[userName] = &pb.Message{User: &pb.User{Username: userName}, Text: ""}
 			break
 		}
 	}
 
-	return &pb.Message{Text: msg}, nil
+	return newMsg, nil
 }
 
 func main() {
@@ -64,6 +67,5 @@ func main() {
 		log.Fatalf("failed to serve: %v", err)
 	}
 
-	com = make(chan *pb.Message)
-	mes = ""
+	userList = &pb.UserList{Users: make([]*pb.User, 5), MessageMap: make(map[string]*pb.Message)}
 }
