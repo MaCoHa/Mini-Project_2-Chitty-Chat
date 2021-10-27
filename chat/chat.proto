@@ -6,22 +6,27 @@ option go_package = "../chat";
 package chat;
 
 service ChatService {
-    rpc Publish (Msg) returns (Response) {}
-    rpc Broadcast (Msg) returns (Response) {}
-    rpc Receive (Msg) returns (Response) {}
+    rpc Publish (Message) returns (Response) {}
+    rpc Broadcast (Message) returns (Response) {}
     rpc Connect (User) returns (Response) {}
     rpc Disconnect (User) returns (Response) {}
+    rpc Listen (User) returns (Message) {}
 }
 
-message Msg {
-    string Message = 1;
+message Message {
+    User User = 1;
+    string Text = 3;
 }
 
 message Response {
-    string Message = 1;
+    string Status = 1;
 }
 
 message User {
     string Username = 1;
     int32 Port = 2;
+}
+
+message Users {
+    repeated User Users = 1;
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"strings"
 
 	"google.golang.org/grpc"
 )
@@ -29,7 +30,7 @@ func main() {
 	defer func(conn *grpc.ClientConn) {
 		err := conn.Close()
 		if err != nil {
-
+			log.Fatalf("connection problem: %v", err)
 		}
 	}(conn)
 
@@ -38,17 +39,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	/*resp, err := client.Publish(ctx, &pb.Msg{Message: "Test bish"})
-	if err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-
-	if resp != nil {
-		log.Printf("success, %v", resp)
-	} else {
-		log.Printf("problem, %v", err)
-	}*/
-
+	go updateNewsfeed(ctx, client, &pb.User{})
 	read(ctx, client)
 }
 
@@ -56,12 +47,12 @@ func read(ctx context.Context, client pb.ChatServiceClient) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		line, _ := reader.ReadString('\n')
-		if line == "quit" {
+		if strings.Contains(line, "/quit") {
 			//code to leave chat here
 			break
 		}
 
-		msg := &pb.Msg{Message: line}
+		msg := &pb.Message{Text: line}
 
 		client.Publish(ctx, msg)
 	}
@@ -70,7 +61,12 @@ func read(ctx context.Context, client pb.ChatServiceClient) {
 //protoc go types
 //https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any
 
-func updateNewsfeed(ctx context.Context, client ChatServiceClient) {
-	//call client and wait for response from server
-	//response should contain the broadcasted messages
+func updateNewsfeed(ctx context.Context, client pb.ChatServiceClient, user *pb.User) {
+	for {
+		msg, err := client.Listen(ctx, user)
+		if err != nil {
+			log.Fatalf("listening problem: %v", err)
+		}
+		log.Println(msg.Text)
+	}
 }

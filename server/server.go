@@ -13,11 +13,14 @@ const (
 	port = ":8008"
 )
 
+var com chan *pb.Message
+var mes string
+
 type ChatServiceServer struct {
 	pb.UnimplementedChatServiceServer
 }
 
-func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Msg) (*pb.Response, error) {
+func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
 	resp, err := s.Broadcast(ctx, msg)
 	if err != nil {
 		log.Fatalf("Could not send message: %v", err)
@@ -25,9 +28,26 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Msg) (*pb.Respo
 	return resp, nil
 }
 
-func (s *ChatServiceServer) Broadcast(ctx context.Context, in *pb.Msg) (*pb.Response, error) {
-	log.Printf("Msg:" + in.Message)
-	return &pb.Response{Message: "Yo"}, nil
+func (s *ChatServiceServer) Broadcast(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
+	log.Printf("Msg:" + msg.Text)
+	//com <- msg
+	mes = msg.Text
+	return &pb.Response{Status: "Yo"}, nil
+}
+
+func (s *ChatServiceServer) Listen(ctx context.Context, user *pb.User) (*pb.Message, error) {
+	//msg := <-com
+	var msg string
+
+	for {
+		if mes != "" {
+			msg = mes
+			mes = ""
+			break
+		}
+	}
+
+	return &pb.Message{Text: msg}, nil
 }
 
 func main() {
@@ -43,4 +63,7 @@ func main() {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
+	com = make(chan *pb.Message)
+	mes = ""
 }
