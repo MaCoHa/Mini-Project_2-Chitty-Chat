@@ -20,7 +20,7 @@ type ChatServiceServer struct {
 }
 
 func (s *ChatServiceServer) Connect(ctx context.Context, user *pb.User) (*pb.Response, error) {
-	userList.Users[1] = user
+	userList.Users = append(userList.Users, user)
 	userList.MessageMap[user.Username] = &pb.Message{User: user, Text: ""}
 	return &pb.Response{Status: "Join Successful"}, nil
 }
@@ -36,7 +36,7 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.R
 func (s *ChatServiceServer) Broadcast(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
 	log.Printf("Msg:" + msg.Text)
 	userList.MessageMap[msg.User.Username] = msg
-	return &pb.Response{Status: "Message Recieved"}, nil
+	return &pb.Response{Status: "Message Received"}, nil
 }
 
 func (s *ChatServiceServer) Listen(ctx context.Context, user *pb.User) (*pb.Message, error) {
