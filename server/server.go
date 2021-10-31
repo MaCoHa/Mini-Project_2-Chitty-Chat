@@ -14,14 +14,24 @@ const (
 	port = ":8008"
 )
 
+var serverUser *pb.User = &pb.User{Username: "SERVER"}
+
 type ChatServiceServer struct {
 	pb.UnimplementedChatServiceServer
 }
 
 func (s *ChatServiceServer) Connect(ctx context.Context, user *pb.User) (*pb.Response, error) {
 	chatData.AddUser(user)
-	log.Println(user.Username + " has joined!")
+	chatData.MessageAll(&pb.Message{User: serverUser, Text: user.Username + " has joined the chat!"})
+	log.Println("Status: " + user.Username + " has joined!")
 	return &pb.Response{Status: "Join Successful"}, nil
+}
+
+func (s *ChatServiceServer) Disconnect(ctx context.Context, user *pb.User) (*pb.Response, error) {
+	chatData.RemoveUser(user)
+	chatData.MessageAll(&pb.Message{User: serverUser, Text: user.Username + " has left the chat!"})
+	log.Println("Status: " + user.Username + " has left the chat!")
+	return &pb.Response{Status: "Leaved Successful"}, nil
 }
 
 func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
@@ -33,7 +43,7 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.R
 }
 
 func (s *ChatServiceServer) Broadcast(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
-	log.Printf("Broadcasting:" + msg.Text)
+	log.Printf("Status: Broadcasting:" + msg.Text)
 	chatData.InsertMessage(msg)
 	return &pb.Response{Status: "Message Recieved"}, nil
 }
@@ -69,19 +79,19 @@ func main() {
 
 type chatDatabase struct {
 	connectedUsers  []*pb.User
-	userToMesageMap map[*pb.User]*pb.Message
+	userToMesageMap map[string]*pb.Message
 	mu              sync.Mutex
 }
 
 var chatData *chatDatabase = &chatDatabase{
 	connectedUsers:  make([]*pb.User, 0),
-	userToMesageMap: make(map[*pb.User]*pb.Message)}
+	userToMesageMap: make(map[string]*pb.Message)}
 
 func (cd *chatDatabase) GetMessage(user *pb.User) *pb.Message {
 	cd.mu.Lock()
 	defer cd.mu.Unlock()
 
-	return cd.userToMesageMap[user]
+	return cd.userToMesageMap[user.Username]
 }
 
 func (cd *chatDatabase) InsertMessage(msg *pb.Message) {
@@ -89,10 +99,14 @@ func (cd *chatDatabase) InsertMessage(msg *pb.Message) {
 	defer cd.mu.Unlock()
 
 	for _, user := range cd.connectedUsers {
-		if cd.userToMesageMap[user] != nil {
-			log.Println("Message overwritten: " + msg.Text)
+		if msg.User.Username == user.Username { //do not send message to the user who wrote it
+			continue
 		}
-		cd.userToMesageMap[user] = msg
+
+		if cd.userToMesageMap[user.Username] != nil {
+			log.Println("Status: Message overwritten: " + msg.Text + " - for user: " + user.Username)
+		}
+		cd.userToMesageMap[user.Username] = msg
 	}
 }
 
@@ -100,11 +114,11 @@ func (cd *chatDatabase) PopMessage(user *pb.User) *pb.Message {
 	cd.mu.Lock()
 	defer cd.mu.Unlock()
 
-	msg := cd.userToMesageMap[user]
+	msg := cd.userToMesageMap[user.Username]
 	if msg != nil {
-		log.Println("found message: " + msg.Text)
+		log.Println("Status: Accesing message: " + msg.Text + " - for user: " + user.Username)
 	}
-	cd.userToMesageMap[user] = nil
+	cd.userToMesageMap[user.Username] = nil
 	return msg
 }
 
@@ -128,4 +142,18 @@ func (cd *chatDatabase) RemoveUser(user *pb.User) {
 		}
 	}
 	cd.connectedUsers = newConnectedUsers
+
+	delete(cd.userToMesageMap, user.Username)
+}
+
+func (cd *chatDatabase) MessageAll(msg *pb.Message) {
+	cd.mu.Lock()
+	defer cd.mu.Unlock()
+
+	for _, user := range cd.connectedUsers {
+		if cd.userToMesageMap[user.Username] != nil {
+			log.Println("Status: Message overwritten: " + msg.Text + " - for user: " + user.Username)
+		}
+		cd.userToMesageMap[user.Username] = msg
+	}
 }

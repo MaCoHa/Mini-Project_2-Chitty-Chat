@@ -4,11 +4,10 @@ import (
 	"bufio"
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
+	"fmt"
 	"log"
 
-	//"math/rand"
 	"os"
-	//"strconv"
 	"strings"
 	"time"
 
@@ -44,11 +43,12 @@ func main() {
 	client = pb.NewChatServiceClient(conn)
 
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	var username string //= strconv.Itoa(rand.Intn(1000))
-	username, _ = bufio.NewReader(os.Stdin).ReadString('\n')
+	fmt.Println("Login with Username:")
+	username, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	username = strings.Replace(username, "\n", "", 1)
 	user = &pb.User{Username: username}
 
 	connect()
@@ -61,10 +61,11 @@ func read() {
 	for {
 		line, _ := reader.ReadString('\n')
 		if strings.Contains(line, "/quit") {
-			//code to leave chat here
+			disconnect()
 			break
 		}
 
+		line = strings.Replace(line, "\n", "", 1)
 		msg := &pb.Message{User: user, Text: line}
 
 		client.Publish(ctx, msg)
@@ -80,14 +81,22 @@ func updateNewsfeed() {
 		if err != nil {
 			log.Fatalf("listening problem: %v", err)
 		}
-		log.Println(msg.Text)
+		log.Println(msg.User.Username + ": " + msg.Text)
 	}
 }
 
 func connect() {
 	resp, err := client.Connect(ctx, user)
 	if err != nil {
-		log.Fatalf("listening problem: %v", err)
+		log.Fatalf("connection problem: %v", err)
+	}
+	log.Println(resp)
+}
+
+func disconnect() {
+	resp, err := client.Connect(ctx, user)
+	if err != nil {
+		log.Fatalf("disconnection problem: %v", err)
 	}
 	log.Println(resp)
 }
