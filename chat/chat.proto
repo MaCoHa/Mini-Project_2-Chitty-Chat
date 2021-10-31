@@ -26,8 +26,3 @@ message User {
     string Username = 1;
     int32 Port = 2;
 }
-
-message UserList {
-    repeated User Users = 1;
-    map<string, Message> messageMap = 2;
-}
