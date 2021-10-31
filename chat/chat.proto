@@ -15,7 +15,7 @@ service ChatService {
 
 message Message {
     User User = 1;
-    string Text = 3;
+    string Text = 2;
 }
 
 message Response {
@@ -24,5 +24,4 @@ message Response {
 
 message User {
     string Username = 1;
-    int32 Port = 2;
 }

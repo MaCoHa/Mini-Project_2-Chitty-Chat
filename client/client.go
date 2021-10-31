@@ -5,9 +5,10 @@ import (
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
-	"math/rand"
+
+	//"math/rand"
 	"os"
-	"strconv"
+	//"strconv"
 	"strings"
 	"time"
 
@@ -46,7 +47,8 @@ func main() {
 	ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	var username string = strconv.Itoa(rand.Intn(1000))
+	var username string //= strconv.Itoa(rand.Intn(1000))
+	username, _ = bufio.NewReader(os.Stdin).ReadString('\n')
 	user = &pb.User{Username: username}
 
 	connect()
@@ -58,7 +60,7 @@ func read() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		line, _ := reader.ReadString('\n')
-		if strings.Split(line, " ")[0] == "/quit" {
+		if strings.Contains(line, "/quit") {
 			//code to leave chat here
 			break
 		}
