@@ -58,7 +58,7 @@ func read() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		line, _ := reader.ReadString('\n')
-		if strings.Contains(line, "/quit") {
+		if strings.Split(line, " ")[0] == "/quit" {
 			//code to leave chat here
 			break
 		}
