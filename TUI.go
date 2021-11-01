@@ -6,6 +6,9 @@ import (
 	"github.com/marcusolsson/tui-go"
 )
 
+var chatview *ChatView
+var Ui tui.UI
+
 // needs to get a client varible that can be used
 func StartChatview() {
 	chatview := NewChatView()
@@ -21,7 +24,7 @@ func StartChatview() {
 	}
 	ui.SetKeybinding("Esc", exit)
 	ui.SetKeybinding("Ctrl+c", exit)
-
+	Ui = ui
 	chatlogin.Login(func(username string) {
 		//username is the new user joining the chat. call
 		//the server with the name
@@ -36,4 +39,7 @@ func StartChatview() {
 	if err := ui.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+func ReciveMessage(msg string) {
+	Ui.Update(func() { chatview.ReciveMessage(msg) })
 }
