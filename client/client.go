@@ -47,8 +47,8 @@ func main() {
 	defer cancel()
 
 	fmt.Println("Login with Username:")
-	username, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-	username = strings.Replace(username, "\n", "", 1)
+	username, _ := bufio.NewReader(os.Stdin).ReadString('\r')
+	username = strings.Replace(username, "\r", "", 1)
 	user = &pb.User{Username: username}
 
 	connect()
@@ -59,13 +59,13 @@ func main() {
 func read() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		line, _ := reader.ReadString('\n')
+		line, _ := reader.ReadString('\r')
 		if strings.Contains(line, "/quit") {
 			disconnect()
 			break
 		}
 
-		line = strings.Replace(line, "\n", "", 1)
+		line = strings.Replace(line, "\r", "", -1)
 		msg := &pb.Message{User: user, Text: line}
 
 		client.Publish(ctx, msg)
@@ -86,11 +86,11 @@ func updateNewsfeed() {
 }
 
 func connect() {
-	resp, err := client.Connect(ctx, user)
+	_, err := client.Connect(ctx, user)
 	if err != nil {
 		log.Fatalf("connection problem: %v", err)
 	}
-	log.Println(resp)
+	//log.Println(resp)
 }
 
 func disconnect() {
