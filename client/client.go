@@ -1,20 +1,22 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
-	"fmt"
-	"log"
-
-	lamport "example/Mini_Project_2_Chitty-Chat/timestamp"
-	"os"
-	"os/signal"
-	"strings"
-	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
+
+	"os"
+	"os/signal"
+	"syscall"
+
+	"bufio"
+	"fmt"
+	"log"
+	"strings"
+
+	lamport "example/Mini_Project_2_Chitty-Chat/timestamp"
 )
 
 const (
@@ -57,53 +59,17 @@ func main() {
 	defer disconnect()
 
 	go listen()
-	read()
+	publish()
 }
 
-func read() {
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-		line, _ := reader.ReadString('\n')
-		line = strings.Replace(line, "\n", "", 1)
-		line = strings.Replace(line, "\r", "", 1)
-
-		if len(line) > 128 {
-			log.Println("Message to big! Max 128 characters!")
-			continue
-		}
-
-		if strings.Contains(line, "/quit") {
-			break
-		}
-
-		msg := &pb.Message{User: user, Text: line, Timestamp: lamp.Increment()}
-		resp, err := client.Publish(ctx, msg)
-		if err != nil {
-			log.Fatalf("Broadcasting problem: %v", err)
-		}
-
-		lamp.Witness(resp.Timestamp)
-	}
-}
-
-//protoc go types
-//https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any
-
-func listen() {
-	for {
-		rec := &pb.Request{User: user, Timestamp: lamp.Increment()}
-
-		msg, err := client.Listen(ctx, rec)
-		if err != nil {
-			log.Fatalf("listening problem: %v", err)
-		}
-
-		lamp.Witness(msg.Timestamp)
-		msg.Timestamp = lamp.GetTimestamp()
-
-		log.Printf("%d: %s: %s", msg.Timestamp, msg.User.Username, msg.Text)
-	}
+func SetupCloseHandler() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		disconnect()
+		os.Exit(0)
+	}()
 }
 
 func connect() *pb.User {
@@ -126,7 +92,7 @@ func connect() *pb.User {
 		lamp.Witness(resp.Timestamp)
 		resp.Timestamp = lamp.GetTimestamp()
 
-		log.Println(resp)
+		fmt.Println(resp)
 		if strings.Contains(resp.Status, "Failed") {
 			continue
 		}
@@ -145,15 +111,48 @@ func disconnect() {
 	lamp.Witness(resp.Timestamp)
 	resp.Timestamp = lamp.GetTimestamp()
 
-	log.Println(resp)
+	fmt.Println(resp)
 }
 
-func SetupCloseHandler() {
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		disconnect()
-		os.Exit(0)
-	}()
+func publish() {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		line, _ := reader.ReadString('\n')
+		line = strings.Replace(line, "\n", "", 1)
+		line = strings.Replace(line, "\r", "", 1)
+
+		if len(line) > 128 {
+			fmt.Println("Message to big! Max 128 characters!")
+			continue
+		}
+
+		if strings.Contains(line, "/quit") {
+			break
+		}
+
+		msg := &pb.Message{User: user, Text: line, Timestamp: lamp.Increment()}
+		resp, err := client.Publish(ctx, msg)
+		if err != nil {
+			log.Fatalf("Broadcasting problem: %v", err)
+		}
+
+		lamp.Witness(resp.Timestamp)
+	}
+}
+
+func listen() {
+	for {
+		rec := &pb.Request{User: user, Timestamp: lamp.Increment()}
+
+		msg, err := client.Listen(ctx, rec)
+		if err != nil {
+			log.Fatalf("listening problem: %v", err)
+		}
+
+		lamp.Witness(msg.Timestamp)
+		msg.Timestamp = lamp.GetTimestamp()
+
+		fmt.Printf("%d: %s: %s\n", msg.Timestamp, msg.User.Username, msg.Text)
+	}
 }
