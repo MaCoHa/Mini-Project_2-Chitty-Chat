@@ -1,22 +1,18 @@
-package main
+package client
 
 import (
-	//"bufio"
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
 
-	//"os"
 	"strings"
 	"time"
 
-	tui "example/Mini_Project_2_Chitty-Chat/tui"
-
+	"github.com/marcusolsson/tui-go"
 	"google.golang.org/grpc"
 )
 
 var Uimessage chan string = make(chan string)
-var UIuserName chan string = make(chan string)
 
 const (
 	serverAddr = "localhost:8008"
@@ -30,9 +26,10 @@ type ChatServiceClient struct {
 	pb.UnimplementedChatServiceServer
 }
 
-func main() {
+func Startclint() {
 	//var opts []grpc.DialOption
 	// Set up a connection to the server.
+
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -45,46 +42,26 @@ func main() {
 	}(conn)
 
 	client = pb.NewChatServiceClient(conn)
-
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
+	StartChatview()
 
-	tui.StartChatview(Uimessage)
-
-	user = connect()
-	defer disconnect()
-
-	go listen()
-	read()
 }
 
-func read() {
-	//reader := bufio.NewReader(os.Stdin)
-	for {
-		var line string
-		select {
-		case l := <-Uimessage:
-			line = l
+func read(message string) {
 
-		}
-		//line, _ := reader.ReadString('\n')
-		//line := tui.ReadFromChan()
-		if strings.Contains(line, "/quit") {
-			break
-		}
+	message = strings.Replace(message, "\n", "", 1)
+	message = strings.Replace(message, "\r", "", 1)
 
-		line = strings.Replace(line, "\n", "", 1)
-		line = strings.Replace(line, "\r", "", 1)
+	if len(message) > 128 {
+		ReciveMessage("Message to big! Max 128 characters!")
 
-		if len(line) > 128 {
-			tui.Println("Message to big! Max 128 characters!")
-			continue
-		}
-
-		msg := &pb.Message{User: user, Text: line}
-		client.Publish(ctx, msg)
 	}
+
+	msg := &pb.Message{User: user, Text: message}
+	client.Publish(ctx, msg)
+
 }
 
 //protoc go types
@@ -92,25 +69,23 @@ func read() {
 
 func listen() {
 	for {
-		msg, err := client.Listen(ctx, user)
-		if err != nil {
-			log.Fatalf("listening problem: %v", err)
-		}
-		tui.Println(msg.User.Username + ": " + msg.Text)
+
+		// msg, err := client.Listen(ctx, user)
+		// if err != nil {
+		// 	log.Fatalf("listening problem: %v", err)
+		// }
+		// var message string
+		// message = " " + msg.User.Username + ": " + msg.Text
+		// chatview.messageHistory.Append(tui.NewLabel("message"))
+
 	}
 }
 
-func connect() *pb.User {
-	tui.Println("Login with Username:")
-	//reader := bufio.NewReader(os.Stdin)
+func connect(username string) *pb.User {
+
 	var tryUser *pb.User
 
 	for {
-		username := "mads"
-		//username, _ := reader.ReadString('\n')
-		//username := tui.ReadFromChan()
-		username = strings.Replace(username, "\n", "", 1)
-		username = strings.Replace(username, "\r", "", 1)
 		tryUser = &pb.User{Username: username}
 
 		resp, err := client.Connect(ctx, tryUser)
@@ -119,10 +94,11 @@ func connect() *pb.User {
 		}
 
 		if strings.Contains(resp.Status, "Failed") {
-			tui.Println(resp.Status)
+			ReciveMessage(resp.Status)
 			continue
 		}
 		break
+
 	}
 
 	return tryUser
@@ -133,5 +109,51 @@ func disconnect() {
 	if err != nil {
 		log.Fatalf("disconnection problem: %v", err)
 	}
-	tui.Println(resp.Status)
+	ReciveMessage(resp.Status)
+}
+
+var chatview *ChatView
+var Ui tui.UI
+var c chan string
+
+// needs to get a client varible that can be used
+func StartChatview() {
+
+	chatview := NewChatView()
+	chatlogin := NewChatLogin()
+
+	ui, err := tui.New(chatlogin.view)
+	if err != nil {
+		log.Fatal(err)
+	}
+	exit := func() {
+		// send user logout message to server
+		defer disconnect()
+		ui.Quit()
+	}
+	ui.SetKeybinding("Esc", exit)
+	ui.SetKeybinding("Ctrl+c", exit)
+	Ui = ui
+	chatlogin.Login(func(username string) {
+		user = connect(username)
+		//username is the new user joining the chat. call
+		//the server with the name
+
+		ui.SetWidget(chatview.view)
+
+		go listen()
+		//defer cancel()
+		chatview.messageHistory.Append(tui.NewLabel("willcome to Chitty chat"))
+	})
+
+	chatview.SendMessage(func(message string) {
+		read(message)
+	})
+
+	if err := ui.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
+func ReciveMessage(msg string) {
+	Ui.Update(func() { chatview.ReciveMessage(msg) })
 }
