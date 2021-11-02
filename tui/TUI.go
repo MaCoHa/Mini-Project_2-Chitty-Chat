@@ -8,9 +8,10 @@ import (
 
 var chatview *ChatView
 var Ui tui.UI
-
+var c chan string
 // needs to get a client varible that can be used
-func StartChatview() {
+func StartChatview(ch chan string) {
+	c = ch
 	chatview := NewChatView()
 	chatlogin := NewChatLogin()
 
@@ -33,13 +34,19 @@ func StartChatview() {
 	})
 
 	chatview.SendMessage(func(message string) {
-		chatview.ReciveMessage(message)
+		Println(message)
+		go WriteToChan(message)
 	})
 
 	if err := ui.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
-func ReciveMessage(msg string) {
+func Println(msg string) {
 	Ui.Update(func() { chatview.ReciveMessage(msg) })
 }
+
+func WriteToChan(s string) {
+	c <- s
+}
+

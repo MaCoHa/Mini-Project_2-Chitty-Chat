@@ -1,18 +1,22 @@
 package main
 
 import (
-	"bufio"
+	//"bufio"
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
-	"fmt"
 	"log"
 
-	"os"
+	//"os"
 	"strings"
 	"time"
 
+	tui "example/Mini_Project_2_Chitty-Chat/tui"
+
 	"google.golang.org/grpc"
 )
+
+var Uimessage chan string = make(chan string)
+var UIuserName chan string = make(chan string)
 
 const (
 	serverAddr = "localhost:8008"
@@ -46,6 +50,8 @@ func main() {
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
+	tui.StartChatview(Uimessage)
+
 	user = connect()
 	defer disconnect()
 
@@ -54,9 +60,16 @@ func main() {
 }
 
 func read() {
-	reader := bufio.NewReader(os.Stdin)
+	//reader := bufio.NewReader(os.Stdin)
 	for {
-		line, _ := reader.ReadString('\n')
+		var line string
+		select {
+		case l := <-Uimessage:
+			line = l
+
+		}
+		//line, _ := reader.ReadString('\n')
+		//line := tui.ReadFromChan()
 		if strings.Contains(line, "/quit") {
 			break
 		}
@@ -65,7 +78,7 @@ func read() {
 		line = strings.Replace(line, "\r", "", 1)
 
 		if len(line) > 128 {
-			log.Println("Message to big! Max 128 characters!")
+			tui.Println("Message to big! Max 128 characters!")
 			continue
 		}
 
@@ -83,18 +96,19 @@ func listen() {
 		if err != nil {
 			log.Fatalf("listening problem: %v", err)
 		}
-		//log.Println(msg)
-		log.Println(msg.User.Username + ": " + msg.Text)
+		tui.Println(msg.User.Username + ": " + msg.Text)
 	}
 }
 
 func connect() *pb.User {
-	fmt.Println("Login with Username:")
-	reader := bufio.NewReader(os.Stdin)
+	tui.Println("Login with Username:")
+	//reader := bufio.NewReader(os.Stdin)
 	var tryUser *pb.User
 
 	for {
-		username, _ := reader.ReadString('\n')
+		username := "mads"
+		//username, _ := reader.ReadString('\n')
+		//username := tui.ReadFromChan()
 		username = strings.Replace(username, "\n", "", 1)
 		username = strings.Replace(username, "\r", "", 1)
 		tryUser = &pb.User{Username: username}
@@ -105,7 +119,7 @@ func connect() *pb.User {
 		}
 
 		if strings.Contains(resp.Status, "Failed") {
-			log.Println(resp)
+			tui.Println(resp.Status)
 			continue
 		}
 		break
@@ -119,5 +133,5 @@ func disconnect() {
 	if err != nil {
 		log.Fatalf("disconnection problem: %v", err)
 	}
-	log.Println(resp)
+	tui.Println(resp.Status)
 }
