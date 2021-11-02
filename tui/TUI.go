@@ -16,7 +16,7 @@ func StartChatview() {
 
 	ui, err := tui.New(chatlogin.view)
 	if err != nil {
-		// make faltal error log or something like that
+		log.Fatal(err)
 	}
 	exit := func() {
 		// send user logout message to server
@@ -33,7 +33,7 @@ func StartChatview() {
 	})
 
 	chatview.SendMessage(func(message string) {
-		//send user message to server
+		chatview.ReciveMessage(message)
 	})
 
 	if err := ui.Run(); err != nil {

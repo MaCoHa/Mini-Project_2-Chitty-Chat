@@ -18,7 +18,7 @@ func NewChatView() *ChatView {
 
 	// create the message history field
 	historyfield := tui.NewVBox()
-
+	chatview.messageHistory = historyfield
 	historyScroll := tui.NewScrollArea(historyfield)
 	historyScroll.SetAutoscrollToBottom(true)
 
@@ -55,8 +55,6 @@ func (v *ChatView) SendMessage(handler SendMessageHandler) {
 
 func (v *ChatView) ReciveMessage(message string) {
 
-	v.messageHistory.Append(
-		tui.NewLabel(message),
-	)
+	v.messageHistory.Append(tui.NewLabel(message))
 
 }
