@@ -45,7 +45,7 @@ func main() {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	
+
 	user = connect()
 	defer disconnect()
 
@@ -63,8 +63,13 @@ func read() {
 
 		line = strings.Replace(line, "\n", "", 1)
 		line = strings.Replace(line, "\r", "", 1)
-		msg := &pb.Message{User: user, Text: line}
 
+		if len(line) > 128 {
+			log.Println("Message to big! Max 128 characters!")
+			continue
+		}
+
+		msg := &pb.Message{User: user, Text: line}
 		client.Publish(ctx, msg)
 	}
 }
