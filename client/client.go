@@ -45,15 +45,11 @@ func main() {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
+	
+	user = connect()
+	defer disconnect()
 
-	fmt.Println("Login with Username:")
-	username, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-	username = strings.Replace(username, "\n", "", 1)
-	username = strings.Replace(username, "\r", "", 1)
-	user = &pb.User{Username: username}
-
-	connect()
-	go updateNewsfeed()
+	go listen()
 	read()
 }
 
@@ -62,7 +58,6 @@ func read() {
 	for {
 		line, _ := reader.ReadString('\n')
 		if strings.Contains(line, "/quit") {
-			disconnect()
 			break
 		}
 
@@ -77,7 +72,7 @@ func read() {
 //protoc go types
 //https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any
 
-func updateNewsfeed() {
+func listen() {
 	for {
 		msg, err := client.Listen(ctx, user)
 		if err != nil {
@@ -88,16 +83,34 @@ func updateNewsfeed() {
 	}
 }
 
-func connect() {
-	_, err := client.Connect(ctx, user)
-	if err != nil {
-		log.Fatalf("connection problem: %v", err)
+func connect() *pb.User {
+	fmt.Println("Login with Username:")
+	reader := bufio.NewReader(os.Stdin)
+	var tryUser *pb.User
+
+	for {
+		username, _ := reader.ReadString('\n')
+		username = strings.Replace(username, "\n", "", 1)
+		username = strings.Replace(username, "\r", "", 1)
+		tryUser = &pb.User{Username: username}
+
+		resp, err := client.Connect(ctx, tryUser)
+		if err != nil {
+			log.Fatalf("connection problem: %v", err)
+		}
+
+		if strings.Contains(resp.Status, "Failed") {
+			log.Println(resp)
+			continue
+		}
+		break
 	}
-	//log.Println(resp)
+
+	return tryUser
 }
 
 func disconnect() {
-	resp, err := client.Connect(ctx, user)
+	resp, err := client.Disconnect(ctx, user)
 	if err != nil {
 		log.Fatalf("disconnection problem: %v", err)
 	}

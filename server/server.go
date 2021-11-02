@@ -14,22 +14,24 @@ const (
 	port = ":8008"
 )
 
-var serverUser *pb.User = &pb.User{Username: "SERVER"}
-
 type ChatServiceServer struct {
 	pb.UnimplementedChatServiceServer
 }
 
 func (s *ChatServiceServer) Connect(ctx context.Context, user *pb.User) (*pb.Response, error) {
-	chatData.AddUser(user)
-	chatData.MessageAll(&pb.Message{User: serverUser, Text: user.Username + " has joined the chat!"})
-	log.Println("Status: " + user.Username + " has joined!")
+	success := chatData.AddUser(user)
+	if !success {
+		return &pb.Response{Status: "Join Failed: Username already taken! - Try another Username"}, nil
+	}
+
+	chatData.InsertMessage(&pb.Message{User: user, Text: user.Username + " has joined the chat!"})
+	log.Println("Status: " + user.Username + " has joined the chat!")
 	return &pb.Response{Status: "Join Successful"}, nil
 }
 
 func (s *ChatServiceServer) Disconnect(ctx context.Context, user *pb.User) (*pb.Response, error) {
 	chatData.RemoveUser(user)
-	chatData.MessageAll(&pb.Message{User: serverUser, Text: user.Username + " has left the chat!"})
+	chatData.InsertMessage(&pb.Message{User: user, Text: user.Username + " has left the chat!"})
 	log.Println("Status: " + user.Username + " has left the chat!")
 	return &pb.Response{Status: "Leaved Successful"}, nil
 }
@@ -39,7 +41,7 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.R
 	if err != nil {
 		log.Fatalf("Could not send message: %v", err)
 	}
-	return resp, nil
+	return resp, err
 }
 
 func (s *ChatServiceServer) Broadcast(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
@@ -79,34 +81,27 @@ func main() {
 
 type chatDatabase struct {
 	connectedUsers  []*pb.User
-	userToMesageMap map[string]*pb.Message
+	userToMesageMap map[string][]*pb.Message
 	mu              sync.Mutex
 }
 
 var chatData *chatDatabase = &chatDatabase{
 	connectedUsers:  make([]*pb.User, 0),
-	userToMesageMap: make(map[string]*pb.Message)}
-
-func (cd *chatDatabase) GetMessage(user *pb.User) *pb.Message {
-	cd.mu.Lock()
-	defer cd.mu.Unlock()
-
-	return cd.userToMesageMap[user.Username]
-}
+	userToMesageMap: make(map[string][]*pb.Message)}
 
 func (cd *chatDatabase) InsertMessage(msg *pb.Message) {
 	cd.mu.Lock()
 	defer cd.mu.Unlock()
 
 	for _, user := range cd.connectedUsers {
-		/*if msg.User.Username == user.Username { //do not send message to the user who wrote it
+		if msg.User.Username == user.Username { //do not send message to the user who wrote it
 			continue
-		}*/
-
-		if cd.userToMesageMap[user.Username] != nil {
-			log.Println("Status: Message overwritten: " + msg.Text + " - for user: " + user.Username)
 		}
-		cd.userToMesageMap[user.Username] = msg
+
+		/*if cd.userToMesageMap[user.Username] != nil {
+			log.Println("Status: Message overwritten: " + msg.Text + " - for user: " + user.Username)
+		}*/
+		cd.userToMesageMap[user.Username] = append(cd.userToMesageMap[user.Username], msg)
 	}
 }
 
@@ -114,21 +109,31 @@ func (cd *chatDatabase) PopMessage(user *pb.User) *pb.Message {
 	cd.mu.Lock()
 	defer cd.mu.Unlock()
 
-	msg := cd.userToMesageMap[user.Username]
-	if msg != nil {
-		log.Println("Status: Accesing message: " + msg.Text + " - for user: " + user.Username)
+	if len(cd.userToMesageMap[user.Username]) < 1 {
+		return nil
 	}
-	cd.userToMesageMap[user.Username] = nil
+
+	msg := cd.userToMesageMap[user.Username][0]
+	log.Println("Status: Accesing message: " + msg.Text + " - for user: " + user.Username)
+
+	cd.userToMesageMap[user.Username] = cd.userToMesageMap[user.Username][1:]
 	return msg
 }
 
-func (cd *chatDatabase) AddUser(user *pb.User) {
+func (cd *chatDatabase) AddUser(user *pb.User) bool {
 	cd.mu.Lock()
 	defer cd.mu.Unlock()
 
-	cd.connectedUsers = append(cd.connectedUsers, user)
+	for i := range cd.connectedUsers {
+		if cd.connectedUsers[i].Username == user.Username {
+			return false
+		}
+	}
 
-	//messegelist append("user joined") on all users
+	cd.connectedUsers = append(cd.connectedUsers, user)
+	cd.userToMesageMap[user.Username] = make([]*pb.Message, 0)
+
+	return true
 }
 
 func (cd *chatDatabase) RemoveUser(user *pb.User) {
@@ -144,16 +149,4 @@ func (cd *chatDatabase) RemoveUser(user *pb.User) {
 	cd.connectedUsers = newConnectedUsers
 
 	delete(cd.userToMesageMap, user.Username)
-}
-
-func (cd *chatDatabase) MessageAll(msg *pb.Message) {
-	cd.mu.Lock()
-	defer cd.mu.Unlock()
-
-	for _, user := range cd.connectedUsers {
-		if cd.userToMesageMap[user.Username] != nil {
-			log.Println("Status: Message overwritten: " + msg.Text + " - for user: " + user.Username)
-		}
-		cd.userToMesageMap[user.Username] = msg
-	}
 }

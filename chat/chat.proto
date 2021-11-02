@@ -16,6 +16,7 @@ service ChatService {
 message Message {
     User User = 1;
     string Text = 2;
+    int64 Timestamp = 3;
 }
 
 message Response {
