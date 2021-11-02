@@ -5,10 +5,12 @@ import (
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"log"
 	"net"
+	"strconv"
 
 	//"sync"
 
 	cd "example/Mini_Project_2_Chitty-Chat/server/database"
+	lamport "example/Mini_Project_2_Chitty-Chat/timestamp"
 
 	"google.golang.org/grpc"
 )
@@ -18,47 +20,62 @@ const (
 )
 
 var chatData = cd.NewChatDatabase()
+var lamp = lamport.NewClock()
 
 type ChatServiceServer struct {
 	pb.UnimplementedChatServiceServer
 }
 
-func (s *ChatServiceServer) Connect(ctx context.Context, user *pb.User) (*pb.Response, error) {
-	success := chatData.AddUser(user)
+func (s *ChatServiceServer) Connect(ctx context.Context, rec *pb.Request) (*pb.Response, error) {
+	lamp.Witness(rec.Timestamp)
+
+	success := chatData.AddUser(rec.User)
 	if !success {
-		return &pb.Response{Status: "Join Failed: Username already taken! - Try another Username"}, nil
+		failMessage := "Join Failed: Username already taken! - Try another Username"
+		resp := &pb.Response{Status: failMessage, Timestamp: lamp.Increment()}
+		return resp, nil
 	}
 
-	chatData.InsertMessage(&pb.Message{User: user, Text: user.Username + " has joined the chat!"})
-	log.Println("Status: " + user.Username + " has joined the chat!")
-	return &pb.Response{Status: "Join Successful"}, nil
+	defer chatData.InsertMessage(&pb.Message{User: rec.User, Text: rec.User.Username + " has joined the chat!", Timestamp: lamp.GetTimestamp()})
+
+	resp := &pb.Response{Status: "Join Successful for user " + rec.User.Username, Timestamp: lamp.Increment()}
+	log.Println(resp)
+	return resp, nil
 }
 
-func (s *ChatServiceServer) Disconnect(ctx context.Context, user *pb.User) (*pb.Response, error) {
-	chatData.RemoveUser(user)
-	chatData.InsertMessage(&pb.Message{User: user, Text: user.Username + " has left the chat!"})
-	log.Println("Status: " + user.Username + " has left the chat!")
-	return &pb.Response{Status: "Left Successful"}, nil
+func (s *ChatServiceServer) Disconnect(ctx context.Context, rec *pb.Request) (*pb.Response, error) {
+	lamp.Witness(rec.Timestamp)
+
+	chatData.RemoveUser(rec.User)
+
+	defer chatData.InsertMessage(&pb.Message{User: rec.User, Text: rec.User.Username + " has left the chat!", Timestamp: lamp.GetTimestamp()})
+
+	resp := &pb.Response{Status: "Left Successful for user " + rec.User.Username, Timestamp: lamp.Increment()}
+	log.Println(resp)
+	return resp, nil
 }
 
 func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
-	resp, err := s.Broadcast(ctx, msg)
-	if err != nil {
-		log.Fatalf("Could not send message: %v", err)
-	}
-	return resp, err
+	lamp.Witness(msg.Timestamp)
+
+	Broadcast(msg)
+
+	return &pb.Response{Status: "Message Recieved", Timestamp: lamp.Increment()}, nil
 }
 
-func (s *ChatServiceServer) Broadcast(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
-	log.Println("Status: Broadcasting: " + msg.Text)
+func Broadcast(msg *pb.Message) {
+	log.Println("Status at time " + strconv.FormatInt(lamp.GetTimestamp(), 10) + ": Broadcasting: " + msg.Text)
 	chatData.InsertMessage(msg)
-	return &pb.Response{Status: "Message Recieved"}, nil
 }
 
-func (s *ChatServiceServer) Listen(ctx context.Context, user *pb.User) (*pb.Message, error) {
+func (s *ChatServiceServer) Listen(ctx context.Context, rec *pb.Request) (*pb.Message, error) {
+	lamp.Witness(rec.Timestamp)
+
 	for {
-		possibleMessage := chatData.PopMessage(user)
+		possibleMessage := chatData.PopMessage(rec.User)
 		if possibleMessage != nil {
+			log.Println("Status at time " + strconv.FormatInt(lamp.GetTimestamp(), 10) + ": Accesing message: " + possibleMessage.Text + " - for user: " + rec.User.Username)
+			possibleMessage.Timestamp = lamp.Increment()
 			return possibleMessage, nil
 		}
 	}

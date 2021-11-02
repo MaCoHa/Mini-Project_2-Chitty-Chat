@@ -2,7 +2,6 @@ package database
 
 import (
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
-	"log"
 	"sync"
 )
 
@@ -40,8 +39,6 @@ func (cd *chatDatabase) PopMessage(user *pb.User) *pb.Message {
 	}
 
 	msg := cd.userToMesageMap[user.Username][0]
-	log.Println("Status: Accesing message: " + msg.Text + " - for user: " + user.Username)
-
 	cd.userToMesageMap[user.Username] = cd.userToMesageMap[user.Username][1:]
 	return msg
 }
