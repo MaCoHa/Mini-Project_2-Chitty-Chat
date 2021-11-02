@@ -9,7 +9,9 @@ import (
 
 	lamport "example/Mini_Project_2_Chitty-Chat/timestamp"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
@@ -49,6 +51,7 @@ func main() {
 	defer cancel()
 
 	lamp = lamport.NewClock()
+	SetupCloseHandler()
 
 	user = connect()
 	defer disconnect()
@@ -143,4 +146,14 @@ func disconnect() {
 	resp.Timestamp = lamp.GetTimestamp()
 
 	log.Println(resp)
+}
+
+func SetupCloseHandler() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		disconnect()
+		os.Exit(0)
+	}()
 }
