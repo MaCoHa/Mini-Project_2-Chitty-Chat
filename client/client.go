@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
+	"fmt"
 	"log"
+
 	"os"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -14,6 +17,10 @@ import (
 const (
 	serverAddr = "localhost:8008"
 )
+
+var client pb.ChatServiceClient
+var ctx context.Context
+var user *pb.User
 
 type ChatServiceClient struct {
 	pb.UnimplementedChatServiceServer
@@ -29,45 +36,83 @@ func main() {
 	defer func(conn *grpc.ClientConn) {
 		err := conn.Close()
 		if err != nil {
-
+			log.Fatalf("connection problem: %v", err)
 		}
 	}(conn)
 
-	client := pb.NewChatServiceClient(conn)
+	client = pb.NewChatServiceClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
+	
+	user = connect()
+	defer disconnect()
 
-	/*resp, err := client.Publish(ctx, &pb.Msg{Message: "Test bish"})
-	if err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-
-	if resp != nil {
-		log.Printf("success, %v", resp)
-	} else {
-		log.Printf("problem, %v", err)
-	}*/
-
-	read(ctx, client)
+	go listen()
+	read()
 }
 
-func read(ctx context.Context, client pb.ChatServiceClient) {
+func read() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		line, _ := reader.ReadString('\n')
-		if line == "quit" {
-			//code to leave chat here
+		if strings.Contains(line, "/quit") {
 			break
 		}
 
-		msg := &pb.Msg{Message: line}
+		line = strings.Replace(line, "\n", "", 1)
+		line = strings.Replace(line, "\r", "", 1)
+		msg := &pb.Message{User: user, Text: line}
 
 		client.Publish(ctx, msg)
 	}
 }
 
-func updateNewsfeed(ctx context.Context, client ChatServiceClient) {
-	//call client and wait for response from server
-	//response should contain the broadcasted messages
+//protoc go types
+//https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#google.protobuf.Any
+
+func listen() {
+	for {
+		msg, err := client.Listen(ctx, user)
+		if err != nil {
+			log.Fatalf("listening problem: %v", err)
+		}
+		//log.Println(msg)
+		log.Println(msg.User.Username + ": " + msg.Text)
+	}
+}
+
+func connect() *pb.User {
+	fmt.Println("Login with Username:")
+	reader := bufio.NewReader(os.Stdin)
+	var tryUser *pb.User
+
+	for {
+		username, _ := reader.ReadString('\n')
+		username = strings.Replace(username, "\n", "", 1)
+		username = strings.Replace(username, "\r", "", 1)
+		tryUser = &pb.User{Username: username}
+
+		resp, err := client.Connect(ctx, tryUser)
+		if err != nil {
+			log.Fatalf("connection problem: %v", err)
+		}
+
+		if strings.Contains(resp.Status, "Failed") {
+			log.Println(resp)
+			continue
+		}
+		break
+	}
+
+	return tryUser
+}
+
+func disconnect() {
+	resp, err := client.Disconnect(ctx, user)
+	if err != nil {
+		log.Fatalf("disconnection problem: %v", err)
+	}
+	log.Println(resp)
 }
