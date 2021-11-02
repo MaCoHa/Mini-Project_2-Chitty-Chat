@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"fmt"
 	"log"
 	"strconv"
 
@@ -30,7 +31,7 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterChatServiceServer(s, &ChatServiceServer{})
-	log.Printf("server listening at %v", lis.Addr())
+	fmt.Printf("server listening at %v\n", lis.Addr())
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
@@ -52,9 +53,9 @@ func (s *ChatServiceServer) Connect(ctx context.Context, rec *pb.Request) (*pb.R
 
 	defer chatData.InsertMessage(&pb.Message{User: rec.User, Text: rec.User.Username + " has joined the chat!", Timestamp: localLamport.GetTimestamp()})
 
-	status := "Join Successful for user " + rec.User.Username
+	status := "for user " + rec.User.Username + " - Join Successful"
 	resp := &pb.Response{Status: status, Timestamp: localLamport.Increment()}
-	log.Println(resp)
+	fmt.Println(resp)
 	return resp, nil
 }
 
@@ -65,9 +66,9 @@ func (s *ChatServiceServer) Disconnect(ctx context.Context, rec *pb.Request) (*p
 
 	defer chatData.InsertMessage(&pb.Message{User: rec.User, Text: rec.User.Username + " has left the chat!", Timestamp: localLamport.GetTimestamp()})
 
-	status := "Left Successful for user " + rec.User.Username
+	status := "for user " + rec.User.Username + " - Left Successful"
 	resp := &pb.Response{Status: status, Timestamp: localLamport.Increment()}
-	log.Println(resp)
+	fmt.Println(resp)
 	return resp, nil
 }
 
@@ -76,9 +77,9 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.R
 
 	chatData.InsertMessage(msg)
 
-	status := "Message Recieved: " + msg.Text + " - for user " + msg.User.Username
+	status := "for user " + msg.User.Username + " - Message Recieved: " + msg.Text
 	resp := &pb.Response{Status: status, Timestamp: localLamport.Increment()}
-	log.Println(resp)
+	fmt.Println(resp)
 	return resp, nil
 }
 
@@ -89,11 +90,10 @@ func (s *ChatServiceServer) Listen(ctx context.Context, rec *pb.Request) (*pb.Me
 		possibleMessage := chatData.PopMessage(rec.User)
 		if possibleMessage != nil {
 			possibleMessage.Timestamp = localLamport.Increment()
-			status := "Status: " +
-				"Accesing message: " + possibleMessage.Text +
-				" - for user " + rec.User.Username +
-				"Timestamp: " + strconv.FormatInt(localLamport.GetTimestamp(), 10)
-			log.Println(status)
+			status := "Timestamp:" + strconv.FormatInt(localLamport.GetTimestamp(), 10) +
+				"  Status:\"for user " + rec.User.Username +
+				" - Accesing Message: " + possibleMessage.Text + "\""
+			fmt.Println(status)
 			return possibleMessage, nil
 		}
 	}

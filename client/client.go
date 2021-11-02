@@ -153,6 +153,6 @@ func listen() {
 		lamp.Witness(msg.Timestamp)
 		msg.Timestamp = lamp.GetTimestamp()
 
-		fmt.Printf("%d: %s: %s\n", msg.Timestamp, msg.User.Username, msg.Text)
+		fmt.Printf("[%d - %s]: %s\n", msg.Timestamp, msg.User.Username, msg.Text)
 	}
 }

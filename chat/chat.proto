@@ -13,9 +13,9 @@ service ChatService {
 }
 
 message Message {
-    User User = 1;
-    string Text = 2;
-    int64 Timestamp = 3;
+    int64 Timestamp = 1;
+    User User = 2;
+    string Text = 3;
 }
 
 message User {
@@ -23,11 +23,11 @@ message User {
 }
 
 message Response {
-    string Status = 1;
-    int64 Timestamp = 2;
+    int64 Timestamp = 1;
+    string Status = 2;
 }
 
 message Request {
-    User User = 1;
-    int64 Timestamp = 2;
+    int64 Timestamp = 1;
+    User User = 2;
 }
