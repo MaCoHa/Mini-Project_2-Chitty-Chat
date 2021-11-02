@@ -94,13 +94,10 @@ func (cd *chatDatabase) InsertMessage(msg *pb.Message) {
 	defer cd.mu.Unlock()
 
 	for _, user := range cd.connectedUsers {
-		if msg.User.Username == user.Username { //do not send message to the user who wrote it
+		/*if msg.User.Username == user.Username { //do not send message to the user who wrote it
 			continue
-		}
-
-		/*if cd.userToMesageMap[user.Username] != nil {
-			log.Println("Status: Message overwritten: " + msg.Text + " - for user: " + user.Username)
 		}*/
+
 		cd.userToMesageMap[user.Username] = append(cd.userToMesageMap[user.Username], msg)
 	}
 }
