@@ -19,10 +19,9 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatServiceClient interface {
 	Publish(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Response, error)
-	Broadcast(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Response, error)
-	Connect(ctx context.Context, in *User, opts ...grpc.CallOption) (*Response, error)
-	Disconnect(ctx context.Context, in *User, opts ...grpc.CallOption) (*Response, error)
-	Listen(ctx context.Context, in *User, opts ...grpc.CallOption) (*Message, error)
+	Connect(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	Disconnect(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	Listen(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Message, error)
 }
 
 type chatServiceClient struct {
@@ -42,16 +41,7 @@ func (c *chatServiceClient) Publish(ctx context.Context, in *Message, opts ...gr
 	return out, nil
 }
 
-func (c *chatServiceClient) Broadcast(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
-	err := c.cc.Invoke(ctx, "/chat.ChatService/Broadcast", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *chatServiceClient) Connect(ctx context.Context, in *User, opts ...grpc.CallOption) (*Response, error) {
+func (c *chatServiceClient) Connect(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
 	err := c.cc.Invoke(ctx, "/chat.ChatService/Connect", in, out, opts...)
 	if err != nil {
@@ -60,7 +50,7 @@ func (c *chatServiceClient) Connect(ctx context.Context, in *User, opts ...grpc.
 	return out, nil
 }
 
-func (c *chatServiceClient) Disconnect(ctx context.Context, in *User, opts ...grpc.CallOption) (*Response, error) {
+func (c *chatServiceClient) Disconnect(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
 	out := new(Response)
 	err := c.cc.Invoke(ctx, "/chat.ChatService/Disconnect", in, out, opts...)
 	if err != nil {
@@ -69,7 +59,7 @@ func (c *chatServiceClient) Disconnect(ctx context.Context, in *User, opts ...gr
 	return out, nil
 }
 
-func (c *chatServiceClient) Listen(ctx context.Context, in *User, opts ...grpc.CallOption) (*Message, error) {
+func (c *chatServiceClient) Listen(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Message, error) {
 	out := new(Message)
 	err := c.cc.Invoke(ctx, "/chat.ChatService/Listen", in, out, opts...)
 	if err != nil {
@@ -83,10 +73,9 @@ func (c *chatServiceClient) Listen(ctx context.Context, in *User, opts ...grpc.C
 // for forward compatibility
 type ChatServiceServer interface {
 	Publish(context.Context, *Message) (*Response, error)
-	Broadcast(context.Context, *Message) (*Response, error)
-	Connect(context.Context, *User) (*Response, error)
-	Disconnect(context.Context, *User) (*Response, error)
-	Listen(context.Context, *User) (*Message, error)
+	Connect(context.Context, *Request) (*Response, error)
+	Disconnect(context.Context, *Request) (*Response, error)
+	Listen(context.Context, *Request) (*Message, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -97,16 +86,13 @@ type UnimplementedChatServiceServer struct {
 func (UnimplementedChatServiceServer) Publish(context.Context, *Message) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
-func (UnimplementedChatServiceServer) Broadcast(context.Context, *Message) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Broadcast not implemented")
-}
-func (UnimplementedChatServiceServer) Connect(context.Context, *User) (*Response, error) {
+func (UnimplementedChatServiceServer) Connect(context.Context, *Request) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Connect not implemented")
 }
-func (UnimplementedChatServiceServer) Disconnect(context.Context, *User) (*Response, error) {
+func (UnimplementedChatServiceServer) Disconnect(context.Context, *Request) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Disconnect not implemented")
 }
-func (UnimplementedChatServiceServer) Listen(context.Context, *User) (*Message, error) {
+func (UnimplementedChatServiceServer) Listen(context.Context, *Request) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Listen not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
@@ -140,26 +126,8 @@ func _ChatService_Publish_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ChatService_Broadcast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Message)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChatServiceServer).Broadcast(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/chat.ChatService/Broadcast",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).Broadcast(ctx, req.(*Message))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ChatService_Connect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(User)
+	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -171,13 +139,13 @@ func _ChatService_Connect_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/chat.ChatService/Connect",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).Connect(ctx, req.(*User))
+		return srv.(ChatServiceServer).Connect(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ChatService_Disconnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(User)
+	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -189,13 +157,13 @@ func _ChatService_Disconnect_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/chat.ChatService/Disconnect",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).Disconnect(ctx, req.(*User))
+		return srv.(ChatServiceServer).Disconnect(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ChatService_Listen_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(User)
+	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -207,7 +175,7 @@ func _ChatService_Listen_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: "/chat.ChatService/Listen",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).Listen(ctx, req.(*User))
+		return srv.(ChatServiceServer).Listen(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -222,10 +190,6 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Publish",
 			Handler:    _ChatService_Publish_Handler,
-		},
-		{
-			MethodName: "Broadcast",
-			Handler:    _ChatService_Broadcast_Handler,
 		},
 		{
 			MethodName: "Connect",
