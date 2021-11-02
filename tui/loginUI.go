@@ -1,4 +1,4 @@
-package TUI
+package tui
 
 import (
 	tui "github.com/marcusolsson/tui-go"

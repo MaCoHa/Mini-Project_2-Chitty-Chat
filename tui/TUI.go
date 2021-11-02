@@ -1,4 +1,4 @@
-package TUI
+package tui
 
 import (
 	"log"
@@ -14,7 +14,7 @@ func StartChatview() {
 	chatview := NewChatView()
 	chatlogin := NewChatLogin()
 
-	ui, err := tui.New(chatlogin)
+	ui, err := tui.New(chatlogin.view)
 	if err != nil {
 		// make faltal error log or something like that
 	}
@@ -29,7 +29,7 @@ func StartChatview() {
 		//username is the new user joining the chat. call
 		//the server with the name
 
-		ui.SetWidget(chatview)
+		ui.SetWidget(chatview.view)
 	})
 
 	chatview.SendMessage(func(message string) {
