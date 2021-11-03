@@ -25,7 +25,7 @@ type ChatServiceServer struct {
 
 func main() {
 	//Setup the file for log outputs
-	LOG_FILE := "./logs/server.log"
+	LOG_FILE := "./systemlogs/server.log"
 	// open log file
 
 	logFile, err := os.OpenFile(LOG_FILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

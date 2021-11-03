@@ -33,7 +33,7 @@ type ChatServiceClient struct {
 
 func main() {
 	//Setup the file for log outputs
-	LOG_FILE := "./logs/client.log"
+	LOG_FILE := "./systemlogs/client.log"
 	// open log file
 	logFile, err := os.OpenFile(LOG_FILE, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
