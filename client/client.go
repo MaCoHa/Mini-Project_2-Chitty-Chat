@@ -98,7 +98,8 @@ func connect() *pb.User {
 		tryUser := &pb.User{Username: username}
 
 		rec := &pb.Request{User: tryUser, Timestamp: localLamport.Increment()}
-		log.Println(rec)
+		log.Print(rec)
+		log.Println(" - wants to connect")
 		resp, err := client.Connect(ctx, rec)
 		if err != nil {
 			log.Fatalf("connection problem: %v", err)
@@ -118,7 +119,8 @@ func connect() *pb.User {
 
 func disconnect() {
 	rec := &pb.Request{User: user, Timestamp: localLamport.Increment()}
-	log.Println(rec)
+	log.Print(rec)
+	log.Println(" - wants to disconnect")
 	resp, err := client.Disconnect(ctx, rec)
 	if err != nil {
 		log.Fatalf("disconnection problem: %v", err)
@@ -150,7 +152,8 @@ func publish() {
 		}
 
 		msg := &pb.Message{User: user, Text: line, Timestamp: localLamport.Increment()}
-		log.Println(msg)
+		log.Print(msg)
+		log.Println(" - is being published")
 		resp, err := client.Publish(ctx, msg)
 		if err != nil {
 			log.Fatalf("Broadcasting problem: %v", err)
@@ -165,7 +168,8 @@ func publish() {
 func listen() {
 	for {
 		rec := &pb.Request{User: user, Timestamp: localLamport.Increment()}
-		log.Println(rec)
+		log.Print(rec)
+		log.Println(" - tries to listen")
 		msg, err := client.Listen(ctx, rec)
 		if err != nil {
 			log.Fatalf("listening problem: %v", err)
@@ -173,7 +177,8 @@ func listen() {
 
 		localLamport.Witness(msg.Timestamp)
 		msg.Timestamp = localLamport.GetTimestamp()
-		log.Println(msg)
+		log.Print(msg)
+		log.Println(" - is being recieved")
 
 		fmt.Printf("[%s]: %s\n", msg.User.Username, msg.Text)
 	}

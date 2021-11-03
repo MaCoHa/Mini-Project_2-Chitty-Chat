@@ -56,7 +56,8 @@ var localLamport = lamport.NewClock()
 func (s *ChatServiceServer) Connect(ctx context.Context, rec *pb.Request) (*pb.Response, error) {
 	localLamport.Witness(rec.Timestamp)
 	rec.Timestamp = localLamport.GetTimestamp()
-	log.Println(rec)
+	log.Print(rec)
+	log.Println(" - wants to connect")
 
 	success := chatData.AddUser(rec.User)
 	if !success {
@@ -77,7 +78,8 @@ func (s *ChatServiceServer) Connect(ctx context.Context, rec *pb.Request) (*pb.R
 func (s *ChatServiceServer) Disconnect(ctx context.Context, rec *pb.Request) (*pb.Response, error) {
 	localLamport.Witness(rec.Timestamp)
 	rec.Timestamp = localLamport.GetTimestamp()
-	log.Println(rec)
+	log.Print(rec)
+	log.Println(" - wants to disconnect")
 
 	chatData.RemoveUser(rec.User)
 
@@ -92,11 +94,12 @@ func (s *ChatServiceServer) Disconnect(ctx context.Context, rec *pb.Request) (*p
 func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.Response, error) {
 	localLamport.Witness(msg.Timestamp)
 	msg.Timestamp = localLamport.GetTimestamp()
-	log.Println(msg)
+	log.Print(msg)
+	log.Println(" - Message Recieved")
 
 	chatData.InsertMessage(msg)
 
-	status := msg.User.Username + " - Message Recieved: " + msg.Text
+	status := msg.User.Username + " - Broadcasting Message: " + msg.Text
 	resp := &pb.Response{Status: status, Timestamp: localLamport.Increment()}
 	log.Println(resp)
 	return resp, nil
@@ -105,13 +108,15 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.R
 func (s *ChatServiceServer) Listen(ctx context.Context, rec *pb.Request) (*pb.Message, error) {
 	localLamport.Witness(rec.Timestamp)
 	rec.Timestamp = localLamport.GetTimestamp()
-	log.Println(rec)
+	log.Print(rec)
+	log.Println(" - is listening")
 
 	for {
 		possibleMessage := chatData.PopMessage(rec.User)
 		if possibleMessage != nil {
 			possibleMessage.Timestamp = localLamport.Increment()
-			log.Println(possibleMessage)
+			log.Print(possibleMessage)
+			log.Println(" - retrieved by " + rec.User.Username)
 			return possibleMessage, nil
 		}
 	}
