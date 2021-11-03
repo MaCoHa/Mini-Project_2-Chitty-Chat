@@ -10,7 +10,7 @@ type Clock struct {
 
 func NewClock() *Clock {
 	return &Clock{
-		timestamp: 1,
+		timestamp: 0,
 	}
 }
 

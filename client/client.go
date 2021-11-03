@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"bufio"
+	"fmt"
 	"log"
 	"strings"
 
@@ -25,7 +26,7 @@ const (
 var client pb.ChatServiceClient
 var ctx context.Context
 var user *pb.User
-var lamp *lamport.Clock
+var localLamport *lamport.Clock
 
 type ChatServiceClient struct {
 	pb.UnimplementedChatServiceServer
@@ -62,7 +63,7 @@ func main() {
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	lamp = lamport.NewClock()
+	localLamport = lamport.NewClock()
 	SetupCloseHandler()
 
 	user = connect()
@@ -83,26 +84,31 @@ func SetupCloseHandler() {
 }
 
 func connect() *pb.User {
-	log.Println("Login with Username:")
+	fmt.Println("Login with Username:")
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
 		username, _ := reader.ReadString('\n')
 		username = strings.Replace(username, "\n", "", 1)
 		username = strings.Replace(username, "\r", "", 1)
-
+		if username == "" {
+			fmt.Println("Username must not be blank:")
+			continue
+		}
 		tryUser := &pb.User{Username: username}
-		rec := &pb.Request{User: tryUser, Timestamp: lamp.Increment()}
 
+		rec := &pb.Request{User: tryUser, Timestamp: localLamport.Increment()}
+		log.Println(rec)
 		resp, err := client.Connect(ctx, rec)
 		if err != nil {
 			log.Fatalf("connection problem: %v", err)
 		}
 
-		lamp.Witness(resp.Timestamp)
-		resp.Timestamp = lamp.GetTimestamp()
-
+		localLamport.Witness(resp.Timestamp)
+		resp.Timestamp = localLamport.GetTimestamp()
 		log.Println(resp)
+
+		fmt.Println(resp.Status)
 		if strings.Contains(resp.Status, "Failed") {
 			continue
 		}
@@ -111,23 +117,25 @@ func connect() *pb.User {
 }
 
 func disconnect() {
-	rec := &pb.Request{User: user, Timestamp: lamp.Increment()}
-
+	rec := &pb.Request{User: user, Timestamp: localLamport.Increment()}
+	log.Println(rec)
 	resp, err := client.Disconnect(ctx, rec)
 	if err != nil {
 		log.Fatalf("disconnection problem: %v", err)
 	}
 
-	lamp.Witness(resp.Timestamp)
-	resp.Timestamp = lamp.GetTimestamp()
-
+	localLamport.Witness(resp.Timestamp)
+	resp.Timestamp = localLamport.GetTimestamp()
 	log.Println(resp)
+
+	fmt.Println(resp.Status)
 }
 
 func publish() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
+		//fmt.Print("[" + user.Username + "]: ")
 		line, _ := reader.ReadString('\n')
 		line = strings.Replace(line, "\n", "", 1)
 		line = strings.Replace(line, "\r", "", 1)
@@ -141,28 +149,32 @@ func publish() {
 			break
 		}
 
-		msg := &pb.Message{User: user, Text: line, Timestamp: lamp.Increment()}
+		msg := &pb.Message{User: user, Text: line, Timestamp: localLamport.Increment()}
+		log.Println(msg)
 		resp, err := client.Publish(ctx, msg)
 		if err != nil {
 			log.Fatalf("Broadcasting problem: %v", err)
 		}
 
-		lamp.Witness(resp.Timestamp)
+		localLamport.Witness(resp.Timestamp)
+		resp.Timestamp = localLamport.GetTimestamp()
+		log.Println(resp)
 	}
 }
 
 func listen() {
 	for {
-		rec := &pb.Request{User: user, Timestamp: lamp.Increment()}
-
+		rec := &pb.Request{User: user, Timestamp: localLamport.Increment()}
+		log.Println(rec)
 		msg, err := client.Listen(ctx, rec)
 		if err != nil {
 			log.Fatalf("listening problem: %v", err)
 		}
 
-		lamp.Witness(msg.Timestamp)
-		msg.Timestamp = lamp.GetTimestamp()
+		localLamport.Witness(msg.Timestamp)
+		msg.Timestamp = localLamport.GetTimestamp()
+		log.Println(msg)
 
-		log.Printf("[%d - %s]: %s\n", msg.Timestamp, msg.User.Username, msg.Text)
+		fmt.Printf("[%s]: %s\n", msg.User.Username, msg.Text)
 	}
 }
