@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"bufio"
-	"fmt"
 	"log"
 	"strings"
 
@@ -33,6 +32,17 @@ type ChatServiceClient struct {
 }
 
 func main() {
+	//Setup the file for log outputs
+	LOG_FILE := "./logs/client.log"
+	// open log file
+	logFile, err := os.OpenFile(LOG_FILE, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer logFile.Close()
+
+	log.SetOutput(logFile)
+
 	//var opts []grpc.DialOption
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -73,7 +83,7 @@ func SetupCloseHandler() {
 }
 
 func connect() *pb.User {
-	fmt.Println("Login with Username:")
+	log.Println("Login with Username:")
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
@@ -92,7 +102,7 @@ func connect() *pb.User {
 		lamp.Witness(resp.Timestamp)
 		resp.Timestamp = lamp.GetTimestamp()
 
-		fmt.Println(resp)
+		log.Println(resp)
 		if strings.Contains(resp.Status, "Failed") {
 			continue
 		}
@@ -111,7 +121,7 @@ func disconnect() {
 	lamp.Witness(resp.Timestamp)
 	resp.Timestamp = lamp.GetTimestamp()
 
-	fmt.Println(resp)
+	log.Println(resp)
 }
 
 func publish() {
@@ -123,7 +133,7 @@ func publish() {
 		line = strings.Replace(line, "\r", "", 1)
 
 		if len(line) > 128 {
-			fmt.Println("Message to big! Max 128 characters!")
+			log.Println("Message to big! Max 128 characters!")
 			continue
 		}
 
@@ -153,6 +163,6 @@ func listen() {
 		lamp.Witness(msg.Timestamp)
 		msg.Timestamp = lamp.GetTimestamp()
 
-		fmt.Printf("[%d - %s]: %s\n", msg.Timestamp, msg.User.Username, msg.Text)
+		log.Printf("[%d - %s]: %s\n", msg.Timestamp, msg.User.Username, msg.Text)
 	}
 }

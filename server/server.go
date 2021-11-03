@@ -4,10 +4,10 @@ import (
 	"context"
 	pb "example/Mini_Project_2_Chitty-Chat/chat"
 	"net"
+	"os"
 
 	"google.golang.org/grpc"
 
-	"fmt"
 	"log"
 	"strconv"
 
@@ -24,6 +24,16 @@ type ChatServiceServer struct {
 }
 
 func main() {
+	//Setup the file for log outputs
+	LOG_FILE := "./logs/server.log"
+	// open log file
+
+	logFile, err := os.OpenFile(LOG_FILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	log.SetOutput(logFile)
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -31,11 +41,12 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterChatServiceServer(s, &ChatServiceServer{})
-	fmt.Printf("server listening at %v\n", lis.Addr())
+	log.Printf("server listening at %v\n", lis.Addr())
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+	defer logFile.Close()
 }
 
 var chatData = cd.NewChatDatabase()
@@ -55,7 +66,7 @@ func (s *ChatServiceServer) Connect(ctx context.Context, rec *pb.Request) (*pb.R
 
 	status := "for user " + rec.User.Username + " - Join Successful"
 	resp := &pb.Response{Status: status, Timestamp: localLamport.Increment()}
-	fmt.Println(resp)
+	log.Println(resp)
 	return resp, nil
 }
 
@@ -68,7 +79,7 @@ func (s *ChatServiceServer) Disconnect(ctx context.Context, rec *pb.Request) (*p
 
 	status := "for user " + rec.User.Username + " - Left Successful"
 	resp := &pb.Response{Status: status, Timestamp: localLamport.Increment()}
-	fmt.Println(resp)
+	log.Println(resp)
 	return resp, nil
 }
 
@@ -79,7 +90,7 @@ func (s *ChatServiceServer) Publish(ctx context.Context, msg *pb.Message) (*pb.R
 
 	status := "for user " + msg.User.Username + " - Message Recieved: " + msg.Text
 	resp := &pb.Response{Status: status, Timestamp: localLamport.Increment()}
-	fmt.Println(resp)
+	log.Println(resp)
 	return resp, nil
 }
 
@@ -93,7 +104,7 @@ func (s *ChatServiceServer) Listen(ctx context.Context, rec *pb.Request) (*pb.Me
 			status := "Timestamp:" + strconv.FormatInt(localLamport.GetTimestamp(), 10) +
 				"  Status:\"for user " + rec.User.Username +
 				" - Accesing Message: " + possibleMessage.Text + "\""
-			fmt.Println(status)
+			log.Println(status)
 			return possibleMessage, nil
 		}
 	}
